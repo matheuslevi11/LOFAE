@@ -7,8 +7,3 @@ Download [age label](https://partage.imt.fr/index.php/s/nBCzEqi3KgSp276) to the 
 ## Training on your own dataset
 
 You can also train the model with your own dataset. Put your images in the `/data` directory. Modify the dataset path in `train.py`. With the pretrained classifier, you can create a new label file with the age of each image. 
-
-
-
-
-

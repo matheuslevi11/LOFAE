@@ -48,7 +48,7 @@ def init_weights(m):
 def reg_loss(img):
     """Total variation"""
     reg_loss = torch.mean(torch.abs(img[:, :, :, :-1] - img[:, :, :, 1:]))\
-             + torch.mean(torch.abs(img[:, :, :-1, :] - img[:, :, 1:, :]))
+            + torch.mean(torch.abs(img[:, :, :-1, :] - img[:, :, 1:, :]))
     return reg_loss
 
 def vgg_transform(x):

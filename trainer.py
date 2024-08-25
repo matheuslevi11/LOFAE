@@ -235,5 +235,3 @@ class Trainer(nn.Module):
         self.gen_opt.zero_grad()
         self.compute_gen_loss(x_a, x_b, age_a, age_b).backward()
         self.gen_opt.step()
-
-        

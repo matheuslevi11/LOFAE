@@ -76,7 +76,7 @@ def preprocess(img_name):
     img_pil = Image.open(opts.img_path + img_name)
     img_np = np.array(img_pil)
     img = resize(img_pil)
-    if img.size(0) == 1:
+    if img.size(0) == 1: # grayscale to RGB
         img = torch.cat((img, img, img), dim = 0)
     img = normalize(img)
     return img
