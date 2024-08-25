@@ -60,7 +60,7 @@ else:
 df = pd.read_csv('data/fiw_files.csv').drop('index', axis=1)
 db_folder = '/mnt/heavy/DeepLearning/Research/research/rfiw2021/Track1/'
 
-for age in [50, 60]:
+for age in [20, 30, 40, 50, 60]:
     print(f'Generating age {age}')
     for i, row in tqdm.tqdm(df.iterrows()):
         target_image = db_folder + row['filename']
