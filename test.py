@@ -45,7 +45,7 @@ log_dir = os.path.join(opts.log_path, opts.config) + '/'
 if not os.path.exists(opts.out_path):
     os.makedirs(opts.out_path)
 
-config = yaml.load(open('./configs/' + opts.config + '.yaml', 'r'))
+config = yaml.safe_load(open('./configs/' + opts.config + '.yaml', 'r'))
 img_size = (config['input_w'], config['input_h'])
 
 # Initialize trainer

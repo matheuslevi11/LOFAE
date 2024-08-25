@@ -49,7 +49,7 @@ if not os.path.exists(log_dir):
 logger = Logger(log_dir)
 
 
-config = yaml.load(open('./configs/' + opts.config + '.yaml', 'r'))
+config = yaml.safe_load(open('./configs/' + opts.config + '.yaml', 'r'))
 epochs = config['epochs']
 age_min = config['age_min']
 age_max = config['age_max']
