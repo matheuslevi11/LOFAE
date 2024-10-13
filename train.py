@@ -33,8 +33,8 @@ else:
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, default='params', help='Path to the config file.')
-parser.add_argument('--dataset_path', type=str, default='./data/ffhq/', help='dataset path')
-parser.add_argument('--label_file_path', type=str, default='./data/ffhq.npy', help='label file path')
+parser.add_argument('--dataset_path', type=str, default='./data/ffhq/ffhq_256/', help='dataset path')
+parser.add_argument('--label_file_path', type=str, default='./data/ffhq/ffhq.npy', help='label file path')
 parser.add_argument('--vgg_model_path', type=str, default='./models/dex_imdb_wiki.caffemodel.pt', help='pretrained age classifier')
 parser.add_argument('--log_path', type=str, default='./logs/', help='log file path')
 parser.add_argument('--multigpu', type=bool, default=False, help='use multiple gpus')
@@ -54,9 +54,9 @@ epochs = config['epochs']
 age_min = config['age_min']
 age_max = config['age_max']
 
-# The first 10 epochs are trained on 512 x 512 images with a batch size of 4.
+# The first 10 epochs are trained on 128 x 128 images with a batch size of 4.
 batch_size = 4
-img_size = (512, 512)
+img_size = (128, 128)
 
 # Load dataset
 dataset_A = MyDataSet(age_min, age_max, opts.dataset_path, opts.label_file_path, output_size=img_size, training_set=True)
@@ -67,7 +67,7 @@ loader_B = data.DataLoader(dataset_B, batch_size=batch_size, shuffle=True, num_w
 
 # Initialize trainer
 trainer = Trainer(config)
-trainer.initialize(opts.vgg_model_path)   
+trainer.initialize(opts.vgg_model_path)
 trainer.to(device)
 
 epoch_0 = 0
