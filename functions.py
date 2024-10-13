@@ -60,7 +60,7 @@ def vgg_transform(x):
     return out
 
 def get_predict_age(age_pb):
-    predict_age_pb = F.softmax(age_pb)
+    predict_age_pb = F.softmax(age_pb, dim=1)
     predict_age = torch.zeros(age_pb.size(0)).type_as(predict_age_pb)
     for i in range(age_pb.size(0)):
         for j in range(age_pb.size(1)):

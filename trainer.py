@@ -35,7 +35,7 @@ class Trainer(nn.Module):
         self.dis_opt = torch.optim.Adam(self.dis_params, lr=config['lr'], betas=(config['beta_1'], config['beta_2']), weight_decay=config['weight_decay'])
         self.gen_scheduler = torch.optim.lr_scheduler.StepLR(self.gen_opt, step_size=config['step_size'], gamma=config['gamma'])
         self.dis_scheduler = torch.optim.lr_scheduler.StepLR(self.dis_opt, step_size=config['step_size'], gamma=config['gamma'])
-        
+
     def initialize(self, vgg_dir):
         self.enc.apply(init_weights)
         self.dec.apply(init_weights)
@@ -44,7 +44,7 @@ class Trainer(nn.Module):
         vgg_state_dict = torch.load(vgg_dir)
         vgg_state_dict = {k.replace('-', '_'): v for k, v in vgg_state_dict.items()}
         self.classifier.load_state_dict(vgg_state_dict)
-    
+
     def dataparallel(self):
         self.enc = nn.DataParallel(self.enc)
         self.dec = nn.DataParallel(self.dec)
@@ -54,7 +54,7 @@ class Trainer(nn.Module):
 
     def L1loss(self, input, target):
         return torch.mean(torch.abs(input - target))
-    
+
     def L2loss(self, input, target):
         return torch.mean((input - target)**2)
 
@@ -70,14 +70,15 @@ class Trainer(nn.Module):
 
     def grad_penalty_r1(self, net, x, coeff=10):
         """Calculate R1 regularization gradient penalty"""
-        x.requires_grad=True 
+        x.requires_grad=True
         real_predict = net(x)
         gradients = grad(outputs=real_predict.mean(), inputs=x, create_graph=True)[0]
         gradients = gradients.view(gradients.size(0), -1)
         gradient_penalty = (coeff/2) * ((gradients.norm(2, dim=1) ** 2).mean())
         return gradient_penalty
-    
+
     def random_age(self, age_input, diff_val=20):
+        """ Randomly generate target age """
         age_output = age_input.clone()
         if diff_val > (self.config['age_max'] - self.config['age_min'])/2:
             diff_val = (self.config['age_max'] - self.config['age_min'])//2
@@ -104,30 +105,30 @@ class Trainer(nn.Module):
         self.content_code_a, skip_1, skip_2 = self.enc(x_a)
         style_params_a = self.mlp_style(age_a)
         style_params_b = self.mlp_style(age_modif)
-        
+
         x_a_recon = self.dec(self.content_code_a, style_params_a, skip_1, skip_2)
         x_a_modif = self.dec(self.content_code_a, style_params_b, skip_1, skip_2)
-        
+
         return x_a_recon, x_a_modif, age_modif
 
     def compute_gen_loss(self, x_a, x_b, age_a, age_b, log=False):
         # Generate modified image
         x_a_recon, x_a_modif, age_a_modif = self.gen_encode(x_a, age_a, age_b, training=True)
-        
+
         # Feed into discriminator
         realism_a_modif = self.dis(x_a_modif)
         predict_age_pb = self.classifier(vgg_transform(x_a_modif))['fc8']
-        
+
         # Get predicted age
         predict_age = get_predict_age(predict_age_pb)
         self.age_diff = torch.mean(torch.abs(predict_age - age_a_modif.float()))
-        
+
         # Classification loss
         self.loss_class = self.CEloss(predict_age_pb, age_a_modif)
-        
+
         # Reconstruction loss
         self.loss_recon = self.L1loss(x_a_recon, x_a)
-        
+
         # Adversarial loss
         self.loss_adver = self.GAN_loss(realism_a_modif, True).mean()
 
@@ -149,14 +150,14 @@ class Trainer(nn.Module):
         self.realism_b = self.dis(x_b)
         self.realism_a_modif = self.dis(x_a_modif.detach())
 
-        self.loss_gp = self.grad_penalty_r1(self.dis, x_b)  
+        self.loss_gp = self.grad_penalty_r1(self.dis, x_b)
         self.loss_dis = self.GAN_loss(self.realism_b, True).mean() + self.GAN_loss(self.realism_a_modif, False).mean()
-        
+
         self.loss_dis_gp = self.config['w']['dis']*self.loss_dis + self.config['w']['gp']*self.loss_gp
 
         return self.loss_dis_gp
-    
-    
+
+
     def log_image(self, x_a, age_a, logger, n_epoch, n_iter):
         x_a_recon, x_a_modif, age_a_modif = self.gen_encode(x_a, age_a)
         logger.log_images('epoch'+str(n_epoch+1)+'/iter'+str(n_iter+1)+'/content', clip_img(x_a), n_iter + 1)
@@ -169,23 +170,23 @@ class Trainer(nn.Module):
         logger.log_value('loss/class', self.loss_class.item(), n_iter + 1)
         logger.log_value('loss/adv', self.loss_adver.item(), n_iter + 1)
         logger.log_value('loss/dis', self.loss_dis_gp.item(), n_iter + 1)
-        logger.log_value('age_diff', self.age_diff.item(), n_iter + 1) 
+        logger.log_value('age_diff', self.age_diff.item(), n_iter + 1)
         logger.log_value('dis/realism_A_modif', self.realism_a_modif.mean().item(), n_iter + 1)
         logger.log_value('dis/realism_B', self.realism_b.mean().item(), n_iter + 1)
-    
+
     def save_image(self, x_a, age_a, log_dir, n_epoch, n_iter):
         x_a_recon, x_a_modif, age_a_modif = self.gen_encode(x_a, age_a)
         utils.save_image(clip_img(x_a), log_dir + 'epoch' +str(n_epoch+1)+ 'iter' +str(n_iter+1)+ '_content.png')
         utils.save_image(clip_img(x_a_recon), log_dir + 'epoch' +str(n_epoch+1)+ 'iter' +str(n_iter+1)+ '_content_recon_'+str(age_a.cpu().numpy()[0])+'.png')
         utils.save_image(clip_img(x_a_modif), log_dir + 'epoch' +str(n_epoch+1)+ 'iter' +str(n_iter+1)+ '_content_modif_'+str(age_a_modif.cpu().numpy()[0])+'.png')
-    
+
     def test_eval(self, x_a, age_a, target_age=0, hist_trans=True):
         _, x_a_modif, _= self.gen_encode(x_a, age_a, target_age=target_age)
         if hist_trans:
             for j in range(x_a_modif.size(0)):
                 x_a_modif[j] = hist_transform(x_a_modif[j], x_a[j])
         return x_a_modif
-    
+
 
     def save_model(self, log_dir):
         torch.save(self.enc.state_dict(),'{:s}/enc.pth.tar'.format(log_dir))
@@ -204,11 +205,11 @@ class Trainer(nn.Module):
             'dis_opt_state_dict': self.dis_opt.state_dict(),
             'gen_scheduler_state_dict': self.gen_scheduler.state_dict(),
             'dis_scheduler_state_dict': self.dis_scheduler.state_dict()
-        } 
+        }
         torch.save(checkpoint_state, '{:s}/checkpoint'.format(log_dir))
         if (n_epoch+1) % 10 == 0 :
             torch.save(checkpoint_state, '{:s}/checkpoint'.format(log_dir)+'_'+str(n_epoch+1))
-    
+
     def load_model(self, log_dir):
         self.enc.load_state_dict(torch.load('{:s}/enc.pth.tar'.format(log_dir)))
         self.mlp_style.load_state_dict(torch.load('{:s}/mlp_style.pth.tar'.format(log_dir)))
