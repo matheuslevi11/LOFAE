@@ -35,9 +35,11 @@ parser.add_argument('--log_path', type=str, default='./logs/', help='log file pa
 parser.add_argument('--multigpu', type=bool, default=False, help='use multiple gpus')
 parser.add_argument('--checkpoint', type=str, default='', help='checkpoint file path')
 parser.add_argument('--img_path', type=str, default='./test/input/', help='test image path')
-parser.add_argument('--out_path', type=str, default='./databases/ageFIW/Train/', help='test output path')
+parser.add_argument('--partition', type=str, default='Train', help='test output path')
 parser.add_argument('--target_age', type=int, default=55, help='Age transform target, interger value between 20 and 70')
 opts = parser.parse_known_args()[0]
+
+opts.out_path = f'./databases/ageFIW/{opts.partition}/'
 
 log_dir = os.path.join(opts.log_path, opts.config) + '/'
 if not os.path.exists(opts.out_path):
@@ -57,20 +59,26 @@ if opts.checkpoint:
 else:
     trainer.load_checkpoint(log_dir + 'checkpoint')
 
-df = pd.read_csv('data/fiw_train_files.csv')
-db_folder = '/mnt/heavy/DeepLearning/Research/research/rfiw2021/Track1/'
+if opts.partition == 'Train':
+    df = pd.read_csv('data/fiw_train_files.csv')
+elif opts.partition == 'Validation':
+    df = pd.read_csv('data/fiw_val_files.csv')
+else:
+    print("Invalid partition")
+    exit()
 
+db_folder = '/mnt/heavy/DeepLearning/Research/research/rfiw2021/Track1/'
 for age in [20, 30, 40, 50, 60]:
     print(f'Generating age {age}')
     for i, row in tqdm.tqdm(df.iterrows()):
         target_path = db_folder + row['filename']
         target_image = row['filename'].split('/')[-1]
         image_name = target_image.split('.')[0] + '_age_' + str(age) + '.jpg'
-        
+
         if os.path.exists(opts.out_path + image_name):
             continue
         with torch.no_grad():
             img = preprocess(target_path).unsqueeze(0).to(device)
             age_modif = torch.tensor(age).unsqueeze(0).to(device)
-            img_modif = trainer.test_eval(img, age_modif, target_age=age, hist_trans=True)  
+            img_modif = trainer.test_eval(img, age_modif, target_age=age, hist_trans=True)
             utils.save_image(clip_img(img_modif), opts.out_path + image_name)
