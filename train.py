@@ -33,8 +33,7 @@ else:
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, default='params', help='Path to the config file.')
-parser.add_argument('--dataset_path', type=str, default='./data/ffhq/ffhq_256/', help='dataset path')
-parser.add_argument('--label_file_path', type=str, default='./data/ffhq/ffhq.npy', help='label file path')
+parser.add_argument('--dataset', type=str, default='ffhq', help='dataset')
 parser.add_argument('--vgg_model_path', type=str, default='./models/dex_imdb_wiki.caffemodel.pt', help='pretrained age classifier')
 parser.add_argument('--log_path', type=str, default='./logs/', help='log file path')
 parser.add_argument('--multigpu', type=bool, default=False, help='use multiple gpus')
@@ -42,6 +41,8 @@ parser.add_argument('--resume', type=bool, default=False, help='resume from chec
 parser.add_argument('--checkpoint', type=str, default='', help='checkpoint file path')
 opts = parser.parse_args()
 
+opts.dataset_path = f'./data/{opts.dataset}/{opts.dataset}'
+opts.label_file_path = f'./data/{opts.dataset}/{opts.dataset}.npy'
 
 log_dir = os.path.join(opts.log_path, opts.config) + '/'
 if not os.path.exists(log_dir):
@@ -63,7 +64,6 @@ dataset_A = MyDataSet(age_min, age_max, opts.dataset_path, opts.label_file_path,
 dataset_B = MyDataSet(age_min, age_max, opts.dataset_path, opts.label_file_path, output_size=img_size, training_set=True)
 loader_A = data.DataLoader(dataset_A, batch_size=batch_size, shuffle=True, num_workers=1, pin_memory=True)
 loader_B = data.DataLoader(dataset_B, batch_size=batch_size, shuffle=True, num_workers=1, pin_memory=True)
-
 
 # Initialize trainer
 trainer = Trainer(config)
@@ -89,7 +89,7 @@ for n_epoch in range(epoch_0, epoch_0+epochs):
 
     if n_epoch == 10:
         trainer.config['w']['recon'] = 0.1*trainer.config['w']['recon']
-        # Load dataset at 1024 x 1024 resolution for the next 10 epochs
+        # Load dataset at 256 x 256 resolution for the next 10 epochs
         batch_size = config['batch_size']
         img_size = (config['input_h'], config['input_w'])
         dataset_A = MyDataSet(age_min, age_max, opts.dataset_path, opts.label_file_path, output_size=img_size, training_set=True)
